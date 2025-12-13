@@ -1,8 +1,9 @@
 // src/api.js
 
-// 1. Define your Backend URL explicitly
-// Change port 4000 to whatever your server runs on (check your server terminal)
-const API_BASE = "http://localhost:4000";
+// 1. REMOVE the hardcoded domain.
+// In production (Vercel), we just use the relative path (e.g. "/api/documents")
+// The browser will automatically attach the correct domain.
+const API_BASE = "";
 
 export async function apiFetch(endpoint, options = {}) {
     const token = localStorage.getItem('token');
@@ -15,22 +16,23 @@ export async function apiFetch(endpoint, options = {}) {
 
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    // 2. Construct the full URL
-    // Ensure endpoint starts with '/' to avoid double slashes if you mess up
+    // 2. Clean up the endpoint
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+    // 3. Construct URL (Now it's just "/api/..." instead of "http://localhost:4000/api/...")
     const url = `${API_BASE}${cleanEndpoint}`;
 
     try {
-        console.log(`📡 Requesting: ${url}`); // Debug Log
+        console.log(`📡 Requesting: ${url}`);
 
         const res = await fetch(url, { ...options, headers });
 
-        // 3. Handle Non-JSON Responses (Common source of "Wrong Data")
+        // 4. Handle HTML Errors (Like 404 pages from Vercel)
         const contentType = res.headers.get("content-type");
         if (!contentType || !contentType.includes("application/json")) {
             const text = await res.text();
             console.error("❌ Received HTML/Text instead of JSON:", text.substring(0, 100));
-            throw new Error("Server returned non-JSON response. Check your API URL.");
+            throw new Error(`Server Error: Received ${res.status} (${res.statusText})`);
         }
 
         const data = await res.json();
