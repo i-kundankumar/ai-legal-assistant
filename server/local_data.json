@@ -1,0 +1,23 @@
+{
+  "documents": [
+    {
+      "_id": "cy7rk8lbs",
+      "title": "kunda",
+      "text": "kunda",
+      "userEmail": "demo@user.com",
+      "uploaded_at": "2025-12-13T07:27:13.005Z",
+      "analysis": {
+        "summary": [
+          "Document analyzed by Agentic AI.",
+          "Word count: 1",
+          "Standard Agreement."
+        ],
+        "flags": [],
+        "suggested_clause": "Limitation of Liability: In no event shall either party's aggregate liability exceed the total fees paid in the preceding 12 months.",
+        "document_id": "cy7rk8lbs"
+      },
+      "revisions": []
+    }
+  ],
+  "escalations": []
+}

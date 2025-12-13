@@ -1,0 +1,15 @@
+# Dependency directories
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Environment variables (SECRETS)
+.env
+.env.local
+server/.env
+client/.env
+
+# System files
+.DS_Store
+dist/
+build/
