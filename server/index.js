@@ -16,11 +16,19 @@ connectDB();
 app.use(cors());
 app.use(bodyParser.json());
 
+// Routes
 app.use('/api/documents', documentRoutes);
 app.use('/api/escalations', escalationRoutes);
 
+// Root Endpoint
 app.get('/', (req, res) => res.send('Agentic AI Backend (MongoDB Version) Running'));
 
-app.listen(PORT, () => {
-    console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-});
+// 👇 CRITICAL FIX: Only listen if NOT in production (Vercel handles production listening automatically)
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`\n🚀 Server running locally on http://localhost:${PORT}`);
+    });
+}
+
+// Export the app for Vercel
+module.exports = app;
