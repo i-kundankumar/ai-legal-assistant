@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
     try {
         // PASTE YOUR CLOUD URL HERE (Replace <password> with your real password)
-        const MONGO_URI = "mongodb+srv://kundankumar09187:lawyer123@cluster0.b24gn1z.mongodb.net/?appName=Cluster0";
+        const MONGO_URI = process.env.MONGO_URI;
 
         const conn = await mongoose.connect(MONGO_URI);
         console.log(`✅ Cloud MongoDB Connected: ${conn.connection.host}`);
