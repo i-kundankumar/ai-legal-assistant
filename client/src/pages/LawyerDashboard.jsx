@@ -134,10 +134,17 @@ function LawyerDashboard() {
                 <tr key={caseItem._id}>
                   <td>
                     <div className="client-info">
-                      <div className="avatar" style={{background: '#3498db', color: 'white'}}>
-                        {caseItem.requester_email.charAt(0).toUpperCase()}
-                      </div>
-                      <span>{caseItem.requester_email}</span>
+                     <div className="avatar" style={{ background: '#3498db', color: 'white' }}>
+  {(caseItem.requester_name || caseItem.requester_email || "U")
+  .charAt(0)
+  .toUpperCase()}
+
+</div>
+<span>
+  {caseItem.requester_name || caseItem.requester_email || "Unknown User"}
+</span>
+
+
                     </div>
                   </td>
                   <td>{caseItem.document_title}</td>

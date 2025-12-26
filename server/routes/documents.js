@@ -1,76 +1,137 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-// ❌ REMOVE fileDB imports, you don't need them anymore
-// const { readDB, writeDB } = require('../lib/fileDB'); 
+const { connectDB } = require("../lib/db");
+const { analyzeDocument } = require("../lib/geminiClient");
+const auth = require("../middleware/auth");
 
-const { analyzeDocument } = require('../lib/geminiClient');
-const Escalation = require('../models/Escalation');
-const Document = require('../models/Document');
+// ============================
+// GET all documents
+// ============================
+router.get("/", auth, async (req, res) => {
+  const db = await connectDB();
 
-// GET all documents from MongoDB
-router.get('/', async (req, res) => {
-    try {
-        // ✅ FIX: Fetch from MongoDB instead of readDB()
-        // .sort({ uploaded_at: -1 }) puts the newest docs first
-        const docs = await Document.find().sort({ uploaded_at: -1 });
-        res.json(docs);
-    } catch (err) {
-        console.error("❌ Error fetching docs:", err.message);
-        res.status(500).json({ error: "Failed to fetch documents" });
-    }
+  // USER VIEW
+  if (req.user.role === "user") {
+    const docs = await db
+      .collection("documents")
+      .find({ ownerId: req.user.id })
+      .toArray();
+
+    return res.json(docs);
+  }
+
+  // LAWYER VIEW
+  if (req.user.role === "lawyer") {
+    const cases = await db
+      .collection("documents")
+      .find({ assignedLawyer: req.user.id })
+      .toArray();
+
+    return res.json(cases);
+  }
+
+  res.status(403).json({ error: "Unauthorized" });
 });
 
-router.delete('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        await Document.findByIdAndDelete(id);
-        // Also delete any escalations linked to this doc (Optional but good practice)
-        await Escalation.deleteMany({ document_id: id });
 
-        console.log(`🗑️ Deleted document: ${id}`);
-        res.json({ message: "Document deleted successfully" });
-    } catch (err) {
-        console.error("Delete Error:", err);
-        res.status(500).json({ error: "Failed to delete document" });
+// ============================
+// DELETE document
+// ============================
+// ============================
+// DELETE document (STEP 6 APPLIED)
+// ============================
+router.delete("/:id", auth, async (req, res) => {
+  try {
+    const db = await connectDB();
+    const { ObjectId } = require("mongodb");
+
+    const docId = new ObjectId(req.params.id);
+
+    const doc = await db.collection("documents").findOne({ _id: docId });
+
+    if (!doc) {
+      return res.status(404).json({ error: "Document not found" });
     }
+
+    // 🔒 STEP 6: BLOCK USER AFTER ESCALATION
+    if (doc.status === "escalated" && req.user.role === "user") {
+      return res.status(403).json({
+        error: "Document is locked. Lawyer is handling this case."
+      });
+    }
+
+    // 🔒 Owner check (extra safety)
+    if (req.user.role === "user" && doc.ownerId !== req.user.id) {
+      return res.status(403).json({ error: "Not your document" });
+    }
+
+    await db.collection("documents").deleteOne({ _id: docId });
+    await db.collection("escalations").deleteMany({ document_id: docId });
+
+    res.json({ message: "Document deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete document" });
+  }
 });
 
-// POST analyze and save to MongoDB
-router.post('/', async (req, res) => {
-    console.log("📨 Server received a request!");
-    const { title, text, userEmail } = req.body;
 
-    try {
-        console.log("🤖 Starting AI Analysis...");
-        const analysisResults = await analyzeDocument(text);
+// ============================
+// POST analyze + save document
+// ============================
+// ============================
+// POST analyze + save document
+// ============================
+router.post("/", auth, async (req, res) => {
+  try {
+    const db = await connectDB();
+    const { title, text, category } = req.body;
 
-        const newDoc = new Document({
-            title,
-            text,
-            userEmail,
-            analysis: analysisResults
-        });
-
-        console.log("💾 Saving to MongoDB...");
-        await newDoc.save();
-
-        console.log("✅ Successfully Saved:", newDoc._id);
-        res.json(newDoc);
-    } catch (err) {
-        console.error("❌ ERROR IN BACKEND:", err.message);
-        res.status(500).json({ error: err.message });
+    if (!title || !text) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
+
+    const analysisResults = await analyzeDocument(text);
+
+    const doc = {
+      title,
+      text,
+      category: category || "contract",
+      analysis: analysisResults,
+      ownerId: req.user.id,        // ✅ REQUIRED
+      ownerEmail: req.user.email,  // optional
+      status: "analyzed",
+      uploaded_at: new Date()
+    };
+
+    const result = await db.collection("documents").insertOne(doc);
+
+    res.json({ _id: result.insertedId, ...doc });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// GET specific document by ID
-router.get('/:id', async (req, res) => {
-    try {
-        const doc = await Document.findById(req.params.id);
-        if (!doc) return res.status(404).json({ error: "Document not found" });
-        res.json(doc);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+
+// ============================
+// GET document by ID
+// ============================
+router.get("/:id", async (req, res) => {
+  try {
+    const db = await connectDB();
+    const { ObjectId } = require("mongodb");
+
+    const doc = await db
+      .collection("documents")
+      .findOne({ _id: new ObjectId(req.params.id) });
+
+    if (!doc) {
+      return res.status(404).json({ error: "Document not found" });
     }
+
+    res.json(doc);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

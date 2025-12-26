@@ -1,27 +1,49 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import UserPage from "./pages/UserPage";
 import DocumentEditor from "./components/DocumentEditor";
 import LawyerDashboard from "./pages/LawyerDashboard";
-import DocumentDetails from "./components/DocumentDetails"; // 1. IMPORT THIS
+import DocumentDetails from "./components/DocumentDetails";
+import Login from "./pages/Login"; // ✅ IMPORT LOGIN
 import "./index.css";
 import "./styles.css";
 
 function App() {
-  const [activeView, setActiveView] = useState('user');
-  const [currentPage, setCurrentPage] = useState('list');
+  // ✅ AUTH STATE (MUST BE INSIDE COMPONENT)
+  const [user, setUser] = useState(null);
 
-  // 2. NEW STATE: To hold the specific document when clicking "View Details"
+  const [activeView, setActiveView] = useState("user");
+  const [currentPage, setCurrentPage] = useState("list");
   const [selectedDoc, setSelectedDoc] = useState(null);
 
-  // 3. UPDATE: Accept 'data' argument
+  // ✅ LOAD USER FROM LOCALSTORAGE
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  // ✅ LOGOUT
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+  };
+
+  // ✅ AUTH GATE (MUST BE BEFORE JSX)
+  if (!user) {
+    return <Login onLogin={setUser} />;
+  }
+
+  // NAVIGATION HANDLERS
   const handleNavigate = (page, data = null) => {
-    setSelectedDoc(data); // Save the document to state
+    setSelectedDoc(data);
     setCurrentPage(page);
   };
 
   const handleBack = () => {
-    setSelectedDoc(null); // Clear selection on back
-    setCurrentPage('list');
+    setSelectedDoc(null);
+    setCurrentPage("list");
   };
 
   return (
@@ -38,35 +60,40 @@ function App() {
         <nav className="sidebar-nav">
           <div className="nav-section">
             <div className="nav-label">Main</div>
+
             <button
-              className={`nav-item ${activeView === 'user' ? 'active' : ''}`}
+              className={`nav-item ${activeView === "user" ? "active" : ""}`}
               onClick={() => {
-                setActiveView('user');
-                setCurrentPage('list');
+                setActiveView("user");
+                setCurrentPage("list");
               }}
             >
-              <span className="nav-icon">📁</span>
-              <span>My Documents</span>
+              📁 My Documents
             </button>
+
             <button
-              className={`nav-item ${activeView === 'lawyer' ? 'active' : ''}`}
+              className={`nav-item ${activeView === "lawyer" ? "active" : ""}`}
               onClick={() => {
-                setActiveView('lawyer');
-                setCurrentPage('list');
+                setActiveView("lawyer");
+                setCurrentPage("list");
               }}
             >
-              <span className="nav-icon">⚖️</span>
-              <span>Lawyer Dashboard</span>
+              ⚖️ Lawyer Dashboard
             </button>
           </div>
         </nav>
 
         <div className="sidebar-footer">
           <div className="user-profile">
-            <div className="user-avatar">{activeView === 'user' ? 'U' : 'L'}</div>
+            <div className="user-avatar">
+              {user.role === "lawyer" ? "L" : "U"}
+            </div>
             <div className="user-info">
-              <div className="user-name">Demo Account</div>
-              <div className="user-role">{activeView === 'user' ? 'Client' : 'Lawyer'}</div>
+              <div className="user-name">{user.name}</div>
+              <div className="user-role">{user.role}</div>
+              <button onClick={handleLogout} className="logout-btn">
+                Logout
+              </button>
             </div>
           </div>
         </div>
@@ -74,52 +101,23 @@ function App() {
 
       {/* Main Content */}
       <main className="main-content">
-        <div className="view-toggle">
-          <button
-            className={`toggle-btn ${activeView === 'user' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveView('user');
-              setCurrentPage('list');
-            }}
-          >
-            👤 User View
-          </button>
-          <button
-            className={`toggle-btn ${activeView === 'lawyer' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveView('lawyer');
-              setCurrentPage('list');
-            }}
-          >
-            👨‍⚖️ Lawyer View
-          </button>
-        </div>
-
-        {/* ROUTING LOGIC */}
-        {activeView === 'user' && (
+        {activeView === "user" && (
           <>
-            {/* 1. LIST VIEW */}
-            {currentPage === 'list' && (
+            {currentPage === "list" && (
               <UserPage onNavigate={handleNavigate} />
             )}
 
-            {/* 2. CREATION VIEW (Editor) */}
-            {currentPage === 'editor' && (
-              <DocumentEditor onBack={handleBack} initialData={null} />
+            {currentPage === "editor" && (
+              <DocumentEditor onBack={handleBack} />
             )}
 
-            {/* 3. DETAILS VIEW (Dashboard) - THIS WAS MISSING */}
-            {currentPage === 'details' && (
+            {currentPage === "details" && (
               <DocumentDetails doc={selectedDoc} onBack={handleBack} />
             )}
           </>
         )}
 
-        {/* LAWYER VIEW */}
-        {activeView === 'lawyer' && (
-          <LawyerDashboard />
-        )}
-
+        {activeView === "lawyer" && <LawyerDashboard />}
       </main>
     </div>
   );

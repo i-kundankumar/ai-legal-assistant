@@ -1,8 +1,15 @@
-require('dotenv').config();
+require("dotenv").config();
+
 const express = require('express');
-const cors = require('cors');
+
 const bodyParser = require('body-parser');
-const connectDB = require('./lib/db'); // Import Connection
+const cors = require('cors');
+const { connectDB } = require('./lib/db'); // Import Connection
+const dotenv = require('dotenv');
+
+const authRoutes = require('./routes/auth');
+
+dotenv.config();
 
 const documentRoutes = require('./routes/documents');
 const escalationRoutes = require('./routes/escalations');
@@ -16,9 +23,14 @@ connectDB();
 app.use(cors());
 app.use(bodyParser.json());
 
+
 // Routes
 app.use('/api/documents', documentRoutes);
 app.use('/api/escalations', escalationRoutes);
+app.use("/api/auth", authRoutes);
+
+
+
 
 // Root Endpoint
 app.get('/', (req, res) => res.send('Agentic AI Backend (MongoDB Version) Running'));
