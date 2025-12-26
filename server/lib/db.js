@@ -1,15 +1,19 @@
 const { MongoClient } = require("mongodb");
 
 const uri = process.env.MONGO_URI;
-const client = new MongoClient(uri);
 
+let client;
 let db;
 
 async function connectDB() {
-  if (db) return db;
+  if (db) return db; // ✅ reuse connection
+
+  client = new MongoClient(uri);
   await client.connect();
-  db = client.db(); // uses DB from URI
+
+  db = client.db(); // default DB from URI
   console.log("MongoDB connected");
+
   return db;
 }
 
